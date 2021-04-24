@@ -1,0 +1,260 @@
+<!doctype html>
+<html>
+  <head>
+    <title>MaChat</title>
+    <style>
+      * { margin: 0; padding: 0; box-sizing: border-box; }
+      .fonto {
+        font: 300 100px/1.3 'Lobster Two', Helvetica, sans-serif;
+        color: #d4d9ff;
+        text-shadow: 1px 1px 0px #ededed, 4px 4px 0px rgba(0,0,0,0.15);
+        display: inline-block;
+      }
+
+      .msg_card_body{
+			     overflow-y: auto;
+		  }
+      .card{
+          margin-top: auto;
+    			margin-bottom: auto;
+			    height: 500px;
+			    border-radius: 15px !important;
+			    background-color: rgba(0,0,0,0.4) !important;
+
+    			overflow-y: auto;
+    			white-space: normal;
+  		}
+      .msg_cotainer_send{
+          right:0;
+		      margin-top: auto;
+		      margin-bottom: auto;
+      		margin-right: 10px;
+      		border-radius: 25px;
+      		background-color: #e9e9f5;
+      		padding: 10px;
+      		position: relative;
+		max-width: 50%;
+
+	    }
+      .msg_cotainer{
+        margin-top: auto;
+    		margin-bottom: auto;
+    		margin-left: 10px;
+    		border-radius: 25px;
+    		background-color: #a7a7b5;
+    		padding: 10px;
+    		position: relative;
+		max-width: 50%;
+    	}
+      .msg_name{
+		      position: absolute;
+    		left: 0;
+    		bottom: -15px;
+    		color: rgba(255,255,255,0.5);
+    		font-size: 10px;
+    	}
+
+      body,html {
+        font: 13px Helvetica, Arial;
+        height: 100%;
+  			margin: 0;
+        width: 100%;
+      }
+      form { background: #000; padding: 3px; position: fixed; bottom: 0; width: 100%; }
+      form input { border: 0; padding: 10px; width: 90%; margin-right: .5%; }
+      form button { width: 9%; background: rgb(143, 143, 143); border: none; padding: 10px; }
+      form button:hover { width: 9%; background: rgb(166, 166, 166); border: none; padding: 10px; }
+
+      canvas {
+        display: block;
+        margin: 5px 5px;
+        background-color: black;
+      }
+      #events {
+        display: block;
+        height: 150px;
+      }
+
+    </style>
+    <link href='http://fonts.googleapis.com/css?family=Lobster+Two' rel='stylesheet' type='text/css'>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
+  </head>
+  <body style="background-color:#1f1f26;">
+    <!--Change --><div id="normal">
+    <nav class="navbar navbar-dark bg-dark">
+      <h3 class="fonto">MaChat</h3>
+       <button type="submit" class="btn btn-info" onclick="gotopaint()"><b>open paint board</b></button>
+       <button type="submit" class="btn btn-info" onclick="gotogame()"><b>Mini Game</b></button>
+       <button type="submit" class="btn btn-danger" onclick="gotoforum()"><b>Quit the Room</b></button>
+    </nav>
+    <div id="temp1" style="display:block">
+      <h5 style="color:white;">Give yourself a nickname and start the chat!</h5>
+      <input id="username" autocomplete="off" /><button id="submituser">submit</button>
+    </div>
+    <div id="temp2" style="display:none">
+    <!-- ul id="messages"></ul -->
+    <div class="card"><div class="card-body msg_card_body" id="messages"></div></div>
+    <!--  -->
+    <form id="chat" action="">
+      <input id="message" autocomplete="off" /><button><b>Send</b></button>
+    </form>
+    </div>
+    <!--Change --></div>
+    <!--Change --><div id="gaming" style="display:none">
+		  <button class="btn btn-danger" onclick="quitgame()"><b>Quit the Mini Game</b></button>
+                  <canvas width="600" height="600"></canvas>
+                  <div>
+                    <h3 style="color:white">Status</h3>
+                    <div id="events" style="color:red"></div>
+                  </div>
+    <!--Change --></div>
+  <script src="socket.io/socket.io.js"></script>
+  <script>
+  var socket = io();
+  //////////////////file content from game/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  function quitgame(){
+    //location.replace("http://localhost:8080/");
+    document.getElementById("normal").style.display = "block";
+    document.getElementById("gaming").style.display = "none";
+  }
+  const getClickCoordinates = (element, event) => {
+    const { top, left } = element.getBoundingClientRect();
+    const { clientX, clientY } = event;
+    return {
+      x: clientX - left,
+      y: clientY - top
+    };
+  };
+  const log = (text) => {
+    const parent = document.querySelector('#events');
+    parent.innerHTML = text;
+
+  };
+  const createBoard = (canvas, numCells = 30) => {
+    const ctx = canvas.getContext('2d');
+
+    const cellSize = Math.floor(600/numCells);
+
+    const fillCell = (x, y, color) => {
+      ctx.beginPath();
+      ctx.fillStyle = color;
+      ctx.arc((x+0.5)*cellSize, (y+0.5)*cellSize, 0.5*cellSize, 0, 2 * Math.PI);//20, 20);
+      ctx.fill();
+      ctx.stroke();
+    };
+
+    const clear = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    };
+
+    const drawGrid = () => {
+      ctx.beginPath();
+      ctx.strokeStyle = "#FFFFFF";
+      for (let i = 0; i < numCells + 1; i++) {
+        ctx.moveTo(i*cellSize, 0);
+        ctx.lineTo(i*cellSize, numCells*cellSize);
+
+        ctx.moveTo(0, i*cellSize);
+        ctx.lineTo(numCells*cellSize, i*cellSize);
+      }
+
+      ctx.stroke();
+    };
+
+    const drawBoard = (board) => {
+      board.forEach((row, y) => {
+        row.forEach((color, x) => {
+          color && fillCell(x, y, color);
+        })
+      })
+    };
+
+    const reset = (board = []) => {
+      clear();
+      drawGrid();
+      drawBoard(board);
+    };
+
+    const getCellCoordinates = (x, y) => ({
+      x: Math.floor(x/cellSize),
+      y: Math.floor(y/cellSize)
+    });
+
+    return { fillCell, reset, getCellCoordinates };
+  };
+  (() => {
+    const sock = io();
+    const canvas = document.querySelector('canvas');
+    const { fillCell, reset, getCellCoordinates } = createBoard(canvas);
+
+    const onClick = (e) => {
+      if (document.getElementById("gaming").style.display != "none") {
+        const { x, y } = getClickCoordinates(canvas, e);
+        sock.emit('turn', getCellCoordinates(x, y));
+      }
+    };
+    sock.on('message', log);
+    sock.on('turn', ({ x, y, color }) => fillCell(x, y, color));
+    sock.on('board', reset);
+    canvas.addEventListener('click', onClick);
+  })();
+
+  //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////file content from game end here
+
+
+
+  function gotopaint(){
+    //location.replace("http://localhost:8080/");
+	window.open('http://3.142.117.68:3000/','_blank');
+  }
+  function gotoforum(){
+    location.replace("http://49.51.92.202/");
+  }
+  function gotogame(){
+    document.getElementById("normal").style.display = "none";
+    document.getElementById("gaming").style.display = "block";
+  }
+
+  // Create a socket connection (with the server that sent this file)
+
+  var username = "  ";//////////////////////////////////////
+  document.getElementById("submituser").onclick = function() {
+    username = document.getElementById("username").value;
+    document.getElementById("temp1").style.display = "none";
+    document.getElementById("temp2").style.display = "block";
+  }
+  // when the form is submitted, send a chat message
+  document.getElementById("chat").onsubmit = function()
+  {
+    // send a message to the server using socket.emit, call the message
+    // "chat message" and give it the content of the chat input textbox
+    //socket.emit('chat message', document.getElementById("message").value );
+    console.log(username);
+    console.log(document.getElementById("message").value);
+    socket.emit('chat message', {'usr': username, 'msg': document.getElementById("message").value});///////////////////////////////////////
+    // set the input textbox to blank after the message is sent
+    document.getElementById("message").value = "";
+
+    // stop the default action of the form submit from occurring
+    return false;
+  }
+
+  // listen of "chat message" on the client side, when one is received, append
+  // the message to the list of chat messages
+  socket.on('chat message', function({usr,msg}){
+    if(usr==username) {
+	console.log(msg.length);
+      document.getElementById("messages").innerHTML += '<div class="d-flex justify-content-end mb-4"><div class="msg_cotainer_send"><h5>' + msg + '</h5><span class="msg_name">' + usr + '</span></div></div>';
+
+	//document.getElementById("messages").innerHTML += '<div class="d-flex justify-content-end mb-4"><div class="msg_cotainer_send"><textarea style="min-width:100px;">' + msg + '</textarea><span class="msg_name">' + usr + '</span></div></div>';
+
+    } else {
+      document.getElementById("messages").innerHTML += '<div class="d-flex justify-content-start mb-4"><div class="msg_cotainer"><h5>' + msg + '</h5><span class="msg_name">' + usr + '</span></div></div>';
+    }
+    //document.getElementById("messages").innerHTML += "<li>" + msg + "</li>";
+  });
+
+  </script>
+  </body>
+</html>
